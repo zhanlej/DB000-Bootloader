@@ -1,11 +1,13 @@
+#include "stdio.h"
 #include "led.h"
 #include "delay.h"
 #include "key.h"
 #include "sys.h"
 //#include "lcd.h"
-#include "usart.h"
+//#include "usart.h"
 #include "stmflash.h"
 #include "iap.h"
+#include "uart.h"
  
  
 /************************************************
@@ -28,10 +30,14 @@ int main(void)
 	u8 clearflag=0;  
 
         NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2); //设置NVIC中断分组2:2位抢占优先级，2位响应优先级
-	uart_init(115200);	//串口初始化为115200
+	//uart_init(115200);	//串口初始化为115200
+	USART1Conf(115200, 0, 1);
+	USART2Conf(115200, 3, 3);
 	delay_init();	   	 	//延时初始化 
  	LED_Init();		  			//初始化与LED连接的硬件接口
 	KEY_Init();					//初始化按键
+	
+	printf("test");
  
 	while(1)
 	{
