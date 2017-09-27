@@ -2,7 +2,7 @@
 #include "delay.h"
 #include "key.h"
 #include "sys.h"
-#include "lcd.h"
+//#include "lcd.h"
 #include "usart.h"
 #include "stmflash.h"
 #include "iap.h"
@@ -32,19 +32,7 @@ int main(void)
 	delay_init();	   	 	//延时初始化 
  	LED_Init();		  			//初始化与LED连接的硬件接口
 	KEY_Init();					//初始化按键
-	LCD_Init();			   		//初始化LCD  
-	POINT_COLOR=RED;//设置字体为红色 
-	LCD_ShowString(30,50,200,16,16,"Warship STM32");	
-	LCD_ShowString(30,70,200,16,16,"IAP TEST");	
-	LCD_ShowString(30,90,200,16,16,"ATOM@ALIENTEK");
-	LCD_ShowString(30,110,200,16,16,"2015/1/27");  
-	LCD_ShowString(30,130,200,16,16,"KEY_UP:Copy APP2FLASH");
-	LCD_ShowString(30,150,200,16,16,"KEY2:Erase SRAM APP");
-	LCD_ShowString(30,170,200,16,16,"KEY1:Run FLASH APP");
-	LCD_ShowString(30,190,200,16,16,"KEY0:Run SRAM APP");
-	POINT_COLOR=BLUE;
-	//显示提示信息
-	POINT_COLOR=BLUE;//设置字体为蓝色	  
+ 
 	while(1)
 	{
 	 	if(USART_RX_CNT)
@@ -67,7 +55,6 @@ int main(void)
 			if(clearflag)
 			{
 				clearflag--;
-				if(clearflag==0)LCD_Fill(30,210,240,210+16,WHITE);//清除显示
 			}
 		}	  	 
 		key=KEY_Scan(0);
@@ -76,21 +63,17 @@ int main(void)
 			if(applenth)
 			{
 				printf("开始更新固件...\r\n");	
-				LCD_ShowString(30,210,200,16,16,"Copying APP2FLASH...");
  				if(((*(vu32*)(0X20001000+4))&0xFF000000)==0x08000000)//判断是否为0X08XXXXXX.
 				{	 
 					iap_write_appbin(FLASH_APP1_ADDR,USART_RX_BUF,applenth);//更新FLASH代码   
-					LCD_ShowString(30,210,200,16,16,"Copy APP Successed!!");
 					printf("固件更新完成!\r\n");	
 				}else 
-				{
-					LCD_ShowString(30,210,200,16,16,"Illegal FLASH APP!  ");	   
+				{	   
 					printf("非FLASH应用程序!\r\n");
 				}
  			}else 
 			{
 				printf("没有可以更新的固件!\r\n");
-				LCD_ShowString(30,210,200,16,16,"No APP!");
 			}
 			clearflag=7;//标志更新了显示,并且设置7*300ms后清除显示									 
 		}
@@ -99,12 +82,10 @@ int main(void)
 			if(applenth)
 			{																	 
 				printf("固件清除完成!\r\n");    
-				LCD_ShowString(30,210,200,16,16,"APP Erase Successed!");
 				applenth=0;
 			}else 
 			{
 				printf("没有可以清除的固件!\r\n");
-				LCD_ShowString(30,210,200,16,16,"No APP!");
 			}
 			clearflag=7;//标志更新了显示,并且设置7*300ms后清除显示									 
 		}
@@ -116,8 +97,7 @@ int main(void)
 				iap_load_app(FLASH_APP1_ADDR);//执行FLASH APP代码
 			}else 
 			{
-				printf("非FLASH应用程序,无法执行!\r\n");
-				LCD_ShowString(30,210,200,16,16,"Illegal FLASH APP!");	   
+				printf("非FLASH应用程序,无法执行!\r\n");	   
 			}									 
 			clearflag=7;//标志更新了显示,并且设置7*300ms后清除显示	  
 		}
@@ -129,8 +109,7 @@ int main(void)
 				iap_load_app(0X20001000);//SRAM地址
 			}else 
 			{
-				printf("非SRAM应用程序,无法执行!\r\n");
-				LCD_ShowString(30,210,200,16,16,"Illegal SRAM APP!");	   
+				printf("非SRAM应用程序,无法执行!\r\n");	   
 			}									 
 			clearflag=7;//标志更新了显示,并且设置7*300ms后清除显示	 
 		}				   

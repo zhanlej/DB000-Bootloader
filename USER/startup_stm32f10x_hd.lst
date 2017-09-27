@@ -564,13 +564,12 @@ ARM Macro Assembler    Page 9
               00000200 
               00000000 
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M3 --apcs=interw
-ork --depend=..\obj\startup_stm32f10x_hd.d -o..\obj\startup_stm32f10x_hd.o -I"G
-:\work\stm32×ÊÁÏ\Õ½½¢\Õ½½¢V3 ×ÊÁÏÅÌ(AÅÌ)\4£¬³ÌÐòÔ´Âë\2£¬±ê×¼Àý³Ì-¿âº¯Êý°æ±¾\ÊµÑ
-é47 ´®¿ÚIAPÊµÑé\IAP-Bootloader V1.0\USER\RTE" -IH:\SoftWare\Keil_v5\ARM\PACK\Ke
-il\STM32F1xx_DFP\2.2.0 -IH:\SoftWare\Keil_v5\ARM\CMSIS\Include -IH:\SoftWare\Ke
-il_v5\ARM\PACK\Keil\STM32F1xx_DFP\2.2.0\Device\Include --predefine="__UVISION_V
-ERSION SETA 514" --predefine="STM32F10X_HD SETA 1" --list=.\startup_stm32f10x_h
-d.lst ..\CORE\startup_stm32f10x_hd.s
+ork --depend=..\obj\startup_stm32f10x_hd.d -o..\obj\startup_stm32f10x_hd.o -IG:
+\work\ZXKJ\project-shair\code\DB000-Bootloader\USER\RTE -IH:\SoftWare\Keil_v5\A
+RM\PACK\Keil\STM32F1xx_DFP\2.2.0 -IH:\SoftWare\Keil_v5\ARM\CMSIS\Include -IH:\S
+oftWare\Keil_v5\ARM\PACK\Keil\STM32F1xx_DFP\2.2.0\Device\Include --predefine="_
+_UVISION_VERSION SETA 514" --predefine="STM32F10X_HD SETA 1" --list=.\startup_s
+tm32f10x_hd.lst ..\CORE\startup_stm32f10x_hd.s
 
 
 
