@@ -1,5 +1,6 @@
 ..\obj\main.o: main.c
 ..\obj\main.o: H:\SoftWare\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+..\obj\main.o: H:\SoftWare\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
 ..\obj\main.o: ..\HARDWARE\LED\led.h
 ..\obj\main.o: ..\SYSTEM\sys\sys.h
 ..\obj\main.o: ..\USER\stm32f10x.h
@@ -36,3 +37,4 @@
 ..\obj\main.o: ..\HARDWARE\STMFLASH\stmflash.h
 ..\obj\main.o: ..\IAP\iap.h
 ..\obj\main.o: ..\SYSTEM\usart\uart.h
+..\obj\main.o: ..\HARDWARE\W25QXX\w25qxx.h

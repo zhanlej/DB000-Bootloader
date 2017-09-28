@@ -6,6 +6,8 @@
 "..\obj\key.o"
 "..\obj\lcd.o"
 "..\obj\stmflash.o"
+"..\obj\spi.o"
+"..\obj\w25qxx.o"
 "..\obj\delay.o"
 "..\obj\sys.o"
 "..\obj\uart.o"
@@ -17,6 +19,7 @@
 "..\obj\stm32f10x_rcc.o"
 "..\obj\stm32f10x_usart.o"
 "..\obj\stm32f10x_flash.o"
+"..\obj\stm32f10x_spi.o"
 "..\obj\iap.o"
 --strict --scatter "..\OBJ\IAP.sct"
 --summary_stderr --info summarysizes --map --xref --callgraph --symbols

@@ -1,4 +1,5 @@
 #include "stdio.h"
+#include "string.h"
 #include "led.h"
 #include "delay.h"
 #include "key.h"
@@ -8,6 +9,8 @@
 #include "stmflash.h"
 #include "iap.h"
 #include "uart.h"
+//外置flash
+#include "w25qxx.h"	
  
  
 /************************************************
@@ -20,6 +23,9 @@
  作者：正点原子 @ALIENTEK
 ************************************************/
 
+#define APP_TEMP_LEN 5120
+u8 app_temp[APP_TEMP_LEN];
+int app_temp_len = 0;
 
 int main(void)
 {		
@@ -28,16 +34,29 @@ int main(void)
 	u16 oldcount=0;				//老的串口接收数据值
 	u16 applenth=0;				//接收到的app代码长度
 	u8 clearflag=0;  
+	u8 appcheck[4];				//用来检查收到的数据是否是app数据
+	int appremain = 0;				//记录剩余多少数据还没
+	int app_off = 0;
+	int i = 0;
 
-        NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2); //设置NVIC中断分组2:2位抢占优先级，2位响应优先级
+  NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1); //设置NVIC中断分组2:2位抢占优先级，2位响应优先级
 	//uart_init(115200);	//串口初始化为115200
-	USART1Conf(115200, 0, 1);
-	USART2Conf(115200, 3, 3);
+	USART1Conf(115200, 0, 0);
+	USART2Conf(115200, 0, 1);
 	delay_init();	   	 	//延时初始化 
  	LED_Init();		  			//初始化与LED连接的硬件接口
 	KEY_Init();					//初始化按键
+	W25QXX_Init();			//W25QXX初始化
 	
 	printf("test");
+	while(W25QXX_ReadID()!=W25Q128)								//检测不到W25Q128
+	{
+		printf("W25Q128 Check Failed!");
+		delay_ms(500);
+		printf("Please Check!");
+		delay_ms(500);
+		LED0=!LED0;//DS0闪烁
+	}
  
 	while(1)
 	{
@@ -50,6 +69,10 @@ int main(void)
 				USART_RX_CNT=0;
 				printf("用户程序接收完成!\r\n");
 				printf("代码长度:%dBytes\r\n",applenth);
+				printf("Start Write W25Q128....\r\n"); 
+				W25QXX_Write((u8*)USART_RX_BUF, 0, applenth);			//从第0个地址处开始写入数据
+				printf("W25Q128 Write Finished!\r\n");	//提示传送完成
+				memset(USART_RX_BUF, 0, sizeof(USART_RX_BUF));
 			}else oldcount=USART_RX_CNT;			
 		}
 		t++;
@@ -68,10 +91,39 @@ int main(void)
 		{
 			if(applenth)
 			{
+				appremain = applenth;
 				printf("开始更新固件...\r\n");	
- 				if(((*(vu32*)(0X20001000+4))&0xFF000000)==0x08000000)//判断是否为0X08XXXXXX.
-				{	 
-					iap_write_appbin(FLASH_APP1_ADDR,USART_RX_BUF,applenth);//更新FLASH代码   
+				W25QXX_Read(appcheck,4,4);					//从第4个地址处开始,读出4个字节
+				printf("appcheck = %02x%02x%02x%02x\r\n",appcheck[3],appcheck[2],appcheck[1],appcheck[0]);
+
+				//printf("(*(vu32*)(0X20001000+4)) = %x\n", (*(vu32*)(0X20001000+4)));
+ 				//if(((*(vu32*)(0X20001000+4))&0xFF000000)==0x08000000)//判断是否为0X08XXXXXX.
+				if(appcheck[3] == 0x08)//判断是否为0X08XXXXXX.
+				{
+					i = 0;
+					app_off = i*APP_TEMP_LEN;
+					
+					while(appremain)
+					{
+						if(appremain <= APP_TEMP_LEN)
+						{
+							app_temp_len = appremain;
+							appremain = 0;
+						}
+						else
+						{
+							app_temp_len = APP_TEMP_LEN;
+							appremain -= APP_TEMP_LEN;
+						}
+						
+						printf("Start Read W25Q128.... %d\r\n", i+1);
+						W25QXX_Read(app_temp, app_off, app_temp_len);
+						//printf("W25Q128 Read Finished!\r\n");
+						iap_write_appbin(FLASH_APP1_ADDR+app_off, app_temp, app_temp_len);//更新FLASH代码   
+						memset(app_temp, 0, APP_TEMP_LEN);
+						
+						i++;
+					}
 					printf("固件更新完成!\r\n");	
 				}else 
 				{	   
