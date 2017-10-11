@@ -24,6 +24,10 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f10x_it.h" 
 #include "uart.h"
+//GPRS模块
+#include "interface.h"
+#include "serialportAPI.h"
+#include "sim800C.h"
 
 
  
@@ -86,25 +90,27 @@ void SysTick_Handler(void)
 /*  available peripheral interrupt handler's name please refer to the startup */
 /*  file (startup_stm32f10x_xx.s).                                            */
 /******************************************************************************/
+void TIM2_IRQHandler(void)
+{
+  /* www.armjishu.com ARM技术论坛 */
+
+  if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
+  {
+    TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+    timer1msINT();
+  }
+}
 
 void USART1_IRQHandler(void)
 {
-	u8 res;	
-#ifdef OS_CRITICAL_METHOD 	//如果OS_CRITICAL_METHOD定义了,说明使用ucosII了.
-	OSIntEnter();    
-#endif
-	if(USART1->SR&(1<<5))//接收到数据
-	{	 
-		res=USART1->DR; 
-		if(USART_RX_CNT<USART_REC_LEN)
-		{
-			USART_RX_BUF[USART_RX_CNT]=res;
-			USART_RX_CNT++;			 									     
-		}
-	}
-#ifdef OS_CRITICAL_METHOD 	//如果OS_CRITICAL_METHOD定义了,说明使用ucosII了.
-	OSIntExit();  											 
-#endif
+  unsigned char rec_data;
+  if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
+  {
+    USART_ClearITPendingBit(USART1, USART_IT_RXNE);
+    /* Read one byte from the receive data register */
+    rec_data = USART_ReceiveData(USART1);
+    SerialInt(rec_data);
+  }
 } 
 
 void USART2_IRQHandler(void)

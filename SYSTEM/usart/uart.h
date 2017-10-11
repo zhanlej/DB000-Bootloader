@@ -3,7 +3,7 @@
 
 #include "stm32f10x.h"
 
-#define USART_REC_LEN  			48*1024 //定义最大接收字节数 55K
+#define USART_REC_LEN  			10*1024 //定义最大接收字节数 55K
 #define DBG_USART2 1
 
 extern u8  USART_RX_BUF[USART_REC_LEN]; //接收缓冲,最大USART_REC_LEN个字节.末字节为换行符 

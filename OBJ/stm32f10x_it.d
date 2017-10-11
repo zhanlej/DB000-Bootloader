@@ -30,3 +30,7 @@
 ..\obj\stm32f10x_it.o: ..\STM32F10x_FWLib\inc\stm32f10x_wwdg.h
 ..\obj\stm32f10x_it.o: ..\STM32F10x_FWLib\inc\misc.h
 ..\obj\stm32f10x_it.o: ..\SYSTEM\usart\uart.h
+..\obj\stm32f10x_it.o: ..\HARDWARE\GSM\interface.h
+..\obj\stm32f10x_it.o: ..\HARDWARE\GSM\serialportAPI.h
+..\obj\stm32f10x_it.o: ..\HARDWARE\GSM\sim800C.h
+..\obj\stm32f10x_it.o: ..\SYSTEM\sys\sys.h

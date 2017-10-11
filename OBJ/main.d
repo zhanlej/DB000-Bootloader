@@ -38,3 +38,6 @@
 ..\obj\main.o: ..\IAP\iap.h
 ..\obj\main.o: ..\SYSTEM\usart\uart.h
 ..\obj\main.o: ..\HARDWARE\W25QXX\w25qxx.h
+..\obj\main.o: ..\HARDWARE\GSM\interface.h
+..\obj\main.o: ..\HARDWARE\GSM\serialportAPI.h
+..\obj\main.o: ..\HARDWARE\GSM\sim800C.h

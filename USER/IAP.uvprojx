@@ -350,7 +350,7 @@
             <Optim>1</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
-            <OneElfS>0</OneElfS>
+            <OneElfS>1</OneElfS>
             <Strict>0</Strict>
             <EnumInt>0</EnumInt>
             <PlainCh>0</PlainCh>
@@ -365,7 +365,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_HD,USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\HARDWARE\LED;..\SYSTEM\delay;..\SYSTEM\sys;..\SYSTEM\usart;..\USER;..\STM32F10x_FWLib\inc;..\CORE;..\HARDWARE\KEY;..\HARDWARE\LCD;..\IAP;..\HARDWARE\STMFLASH;..\HARDWARE\SPI;..\HARDWARE\W25QXX</IncludePath>
+              <IncludePath>..\HARDWARE\LED;..\SYSTEM\delay;..\SYSTEM\sys;..\SYSTEM\usart;..\USER;..\STM32F10x_FWLib\inc;..\CORE;..\HARDWARE\KEY;..\HARDWARE\LCD;..\IAP;..\HARDWARE\STMFLASH;..\HARDWARE\SPI;..\HARDWARE\W25QXX;..\HARDWARE\GSM</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -533,6 +533,11 @@
               <FileType>1</FileType>
               <FilePath>..\STM32F10x_FWLib\src\stm32f10x_spi.c</FilePath>
             </File>
+            <File>
+              <FileName>stm32f10x_tim.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\STM32F10x_FWLib\src\stm32f10x_tim.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -552,6 +557,31 @@
               <FileName>README.TXT</FileName>
               <FileType>5</FileType>
               <FilePath>..\README.TXT</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>GSM</GroupName>
+          <Files>
+            <File>
+              <FileName>interface.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\GSM\interface.c</FilePath>
+            </File>
+            <File>
+              <FileName>serialportAPI.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\GSM\serialportAPI.c</FilePath>
+            </File>
+            <File>
+              <FileName>sim800C.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\GSM\sim800C.c</FilePath>
+            </File>
+            <File>
+              <FileName>stringAPIext.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\GSM\stringAPIext.c</FilePath>
             </File>
           </Files>
         </Group>

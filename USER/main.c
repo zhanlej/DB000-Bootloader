@@ -11,6 +11,10 @@
 #include "uart.h"
 //外置flash
 #include "w25qxx.h"	
+//GPRS模块
+#include "interface.h"
+#include "serialportAPI.h"
+#include "sim800C.h"
  
  
 /************************************************
@@ -26,6 +30,33 @@
 #define APP_TEMP_LEN 5120
 u8 app_temp[APP_TEMP_LEN];
 int app_temp_len = 0;
+char http_buf[512];	//GPRS模块通过http协议获取的数据
+
+
+void NVIC_Configuration(void)  //中断优先级NVIC设置
+{
+  NVIC_InitTypeDef NVIC_InitStructure;
+
+  NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
+
+  /* Enable the TIM2 gloabal Interrupt */
+  NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
+
+  NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQn;  //TIM3中断
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;  //先占优先级0级
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;  //从优先级3级
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE; //IRQ通道被使能
+  NVIC_Init(&NVIC_InitStructure);  //初始化NVIC寄存器
+}
+
+void GPRS_USART(u32 baudRate)
+{
+	USART1Conf(baudRate, 0, 0);
+}
 
 int main(void)
 {		
@@ -39,21 +70,23 @@ int main(void)
 	int app_off = 0;
 	int i = 0;
 
-  NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1); //设置NVIC中断分组2:2位抢占优先级，2位响应优先级
+  NVIC_Configuration();
 	//uart_init(115200);	//串口初始化为115200
-	USART1Conf(115200, 0, 0);
+	UartBegin(115200, &GPRS_USART, &U1_PutChar);				//串口1配置
 	USART2Conf(115200, 0, 1);
+	TIM2_Init();					//每1ms中断一次的定时器，用来记录时间
 	delay_init();	   	 	//延时初始化 
  	LED_Init();		  			//初始化与LED连接的硬件接口
 	KEY_Init();					//初始化按键
 	W25QXX_Init();			//W25QXX初始化
 	
-	printf("test");
+	printf("test\r\n");
+	while(0 == GSMInit(HOST_NAME, HOST_PORT, http_buf)) GSM_restart();
 	while(W25QXX_ReadID()!=W25Q128)								//检测不到W25Q128
 	{
-		printf("W25Q128 Check Failed!");
+		printf("W25Q128 Check Failed!\r\n");
 		delay_ms(500);
-		printf("Please Check!");
+		printf("Please Check!\r\n");
 		delay_ms(500);
 		LED0=!LED0;//DS0闪烁
 	}
@@ -174,6 +207,8 @@ int main(void)
 		 
 	}   	   
 }
+
+
 
 
 
