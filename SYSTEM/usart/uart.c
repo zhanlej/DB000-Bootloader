@@ -1,5 +1,5 @@
 #include "uart.h"
-#include "stdio.h"
+
 
 u8 USART_RX_BUF[USART_REC_LEN] __attribute__ ((at(0X20001000)));//接收缓冲,最大USART_REC_LEN个字节,起始地址为0X20001000.    
 //接收状态

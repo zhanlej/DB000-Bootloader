@@ -30,7 +30,7 @@
 ..\obj\iap.o: ..\STM32F10x_FWLib\inc\stm32f10x_wwdg.h
 ..\obj\iap.o: ..\STM32F10x_FWLib\inc\misc.h
 ..\obj\iap.o: ..\SYSTEM\delay\delay.h
-..\obj\iap.o: ..\SYSTEM\usart\usart.h
+..\obj\iap.o: ..\SYSTEM\usart\uart.h
 ..\obj\iap.o: H:\SoftWare\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 ..\obj\iap.o: ..\HARDWARE\STMFLASH\stmflash.h
 ..\obj\iap.o: ..\IAP\iap.h

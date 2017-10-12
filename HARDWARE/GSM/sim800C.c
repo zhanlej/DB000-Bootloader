@@ -75,6 +75,15 @@ int eATO(void);
 /******  拨号  ******/
 int sATD(int number);
 int sATS0(int number);
+/******  ftp相关操作  ******/
+int sATFTPCID(int value);
+int sATFTPSERV(const char *addr);
+int sATFTPUN(const char *username);
+int sATFTPPW(const char *password);
+int sATFTPGETNAME(const char *filename);
+int sATFTPGETPATH(const char *path);
+int sATFTPGET(int mode, int reqlength);
+int eATFTPQUIT(void);
 
 int eATCWSTARTSMART(uint8_t type, char *link_msg);
 int eATCWSTOPSMART(void);
@@ -83,6 +92,7 @@ int sATCWMODE(uint8_t mode);
 int sATCIPMUX(uint8_t mode);
 int sATCWAUTOCONN(uint8_t mode);
 
+int stringFindAndFilter(const char * source_str, const char *target, const char *begin, const char *end, char *data_get, u8 type);
 int recvFindAndFilter(const char *target, const char *begin, const char *end, char *data_rec, uint32_t timeout);
 int recvFind(const char *target, uint32_t timeout);
 int recvString(char *rec_data, const char *target, uint32_t timeout);
@@ -91,59 +101,6 @@ int eATCIPSTATUS(const char * status);
 int sATCIPSTARTSingle(const char *type, const char *addr, uint32_t port);
 int sATCIPSENDSingle(const uint8_t *buffer, uint32_t len);
 int recvString3(char *rec_data, const char *target1, const char *target2, const char *target3, uint32_t timeout);
-
-/*******************************************************************************
-  函 数 名 ：AutoLink
-  函数功能 ：自动连接，前10s自动连接，若连接失败则进入smartlink模式30s，若依然失败
-             则再次回到自动连接，直到连接成功
-  输    入 ：无
-  输    出 ：无
-*******************************************************************************/
-void AutoLink(void)
-{
-  int status = STATUS_LOSTIP;
-  while (status != STATUS_GETIP)
-  {
-    uint32_t start_time = millis();
-    printf("start auto link");
-    //10s自动连接时间
-    while ((millis() - start_time < 10000) && status != STATUS_GETIP)
-    {
-      status = getSystemStatus();
-      delay(1000);
-    }
-
-    //连接失败进入smartlink模式 30s
-    if (status != STATUS_GETIP)
-    {
-      char link_msg[RECV_BUF_SIZE];
-      printf("start smartlink");
-      stopSmartLink();
-
-      if (1 == smartLink((uint8_t)ESP_AIR, link_msg))
-      {
-        stopSmartLink(); //无论配网是否成功，都需要释放快连所占的内存
-        printf(link_msg);
-        start_time = millis();//等待获取IP
-        while ((millis() - start_time < 5000) && status != STATUS_GETIP)
-        {
-          status = getSystemStatus();
-          delay(500);
-        }
-        sATCWAUTOCONN(1); //开启自动连接模式
-      }
-      else
-      {
-        stopSmartLink();
-        delay(500);
-        printf("link AP fail");
-        //restart();
-      }
-    }
-  }
-  printf("link AP OK");
-  //sATCWAUTOCONN(0); //开启自动连接模式
-}
 
 int GSMInit(const char *addr, uint32_t port, char *http_data)
 {	
@@ -161,6 +118,7 @@ int GSMInit(const char *addr, uint32_t port, char *http_data)
 	//if(!sATIPR(115200)) goto RESTART; //设置波特率
 	if(!ConectTest())	return 0;
 	if(!CheckState()) return 0;
+	if(!FtpInit(addr)) return 0;
 	//if(!FSInit()) return 0;
 	//if(!LSB_API_data()) return 0;
 	//if(!HttpInit(http_data)) return 0;
@@ -320,13 +278,33 @@ int HttpInit(char * http_data)
 int FtpInit(const char *addr)
 {
 	
-	/*http init*/
+	/*配置承载场景*/
 	if(!sATSAPBR1(3,1,"CONTYPE","GPRS")) return 0;
-	printf("http 1 OK!\r\n");
+	printf("SAPBR 1 OK!\r\n");
 	if(!sATSAPBR1(3,1,"APN","CMNET")) return 0;
-	printf("http 2 OK!\r\n");
+	printf("SAPBR 2 OK!\r\n");
 	if(!sATSAPBR2(1,1)) return 0;
-	printf("http 3 OK!\r\n");
+	printf("SAPBR 3 OK!\r\n");
+	/*ftp 设置*/
+	if(!sATFTPCID(1)) return 0;
+	printf("sATFTPCID is ok\r\n");
+	if(!sATFTPSERV("222.29.40.41")) return 0;
+	printf("sATFTPSERV is ok\r\n");
+	if(!sATFTPUN("test")) return 0;
+	printf("sATFTPUN is ok\r\n");
+	if(!sATFTPPW("111111")) return 0;
+	printf("sATFTPPW is ok\r\n");
+	if(!sATFTPGETNAME("download.txt")) return 0;
+	printf("sATFTPGETNAME is ok\r\n");
+	if(!sATFTPGETPATH("/v1.0/")) return 0;
+	printf("sATFTPGETPATH is ok\r\n");
+	if(!sATFTPGET(1, NULL)) return 0;
+	printf("sATFTPGET 1 is ok\r\n");
+	delay(1000);	//由于AT+FTPGET=2,xxx的反应比较慢，需要加一些延迟，否则读出的数会是0。
+	if(!sATFTPGET(2, 256)) return 0;
+	printf("sATFTPGET 2 is ok\r\n");
+	if(!eATFTPQUIT()) return 0;
+	printf("eATFTPQUIT is ok\r\n");
 	
 	
 	return 1;
@@ -1105,6 +1083,108 @@ int sATS0(int number)
 	return recvFind("OK\r\n", 1000);
 }
 /******  拨号  ******/
+
+/******  ftp相关操作  ******/
+int sATFTPCID(int value)
+{
+	char buf[SEND_BUF_SIZE];
+	rx_empty();
+	sprintf(buf, "AT+FTPCID=%d", value);
+	SerialPrintln(buf, STRING_TYPE);
+	return recvFind("OK\r\n", 1000);
+}
+
+int sATFTPSERV(const char *addr)
+{
+	char buf[SEND_BUF_SIZE];
+  ClearRecBuf();
+	sprintf(buf, "AT+FTPSERV=\"%s\"", addr);
+	SerialPrintln(buf, STRING_TYPE);
+	return recvFind("OK\r\n", 1000);
+}
+
+int sATFTPUN(const char *username)
+{
+	char buf[SEND_BUF_SIZE];
+  ClearRecBuf();
+	sprintf(buf, "AT+FTPUN=\"%s\"", username);
+	SerialPrintln(buf, STRING_TYPE);
+	return recvFind("OK\r\n", 1000);
+}
+
+int sATFTPPW(const char *password)
+{
+	char buf[SEND_BUF_SIZE];
+  ClearRecBuf();
+	sprintf(buf, "AT+FTPPW=\"%s\"", password);
+	SerialPrintln(buf, STRING_TYPE);
+	return recvFind("OK\r\n", 1000);
+}
+
+int sATFTPGETNAME(const char *filename)
+{
+	char buf[SEND_BUF_SIZE];
+  ClearRecBuf();
+	sprintf(buf, "AT+FTPGETNAME=\"%s\"", filename);
+	SerialPrintln(buf, STRING_TYPE);
+	return recvFind("OK\r\n", 1000);
+}
+
+int sATFTPGETPATH(const char *path)
+{
+	char buf[SEND_BUF_SIZE];
+  ClearRecBuf();
+	sprintf(buf, "AT+FTPGETPATH=\"%s\"", path);
+	SerialPrintln(buf, STRING_TYPE);
+	return recvFind("OK\r\n", 1000);
+}
+
+int sATFTPGET(int mode, int reqlength)
+{
+	int ret;
+	char buf[SEND_BUF_SIZE];
+	char temp_buf[RECV_BUF_SIZE];
+	char ftp_recv_len_str[5];
+	int ftp_recv_len = 0;
+  ClearRecBuf();
+	if(mode == 1)
+	{
+		sprintf(buf, "AT+FTPGET=%d", mode);
+		SerialPrintln(buf, STRING_TYPE);
+		return recvFind("+FTPGET: 1,1\r\n", 30000);
+	}
+	else if (mode == 2)
+	{
+		sprintf(buf, "AT+FTPGET=%d,%d", mode, reqlength);
+		SerialPrintln(buf, STRING_TYPE);
+		sprintf(buf, "%s\r\r\n", buf);	//经过调试发现此处有两个\r
+		ret = recvFindAndFilter("OK\r\n", buf, NULL, temp_buf, 5000);
+		printf("ret = %d, temp_buf = %s\r\n", ret, temp_buf);
+		if(ret != 1) return 0;
+		ret = stringFindAndFilter(temp_buf, "+FTPGET: 2,", "+FTPGET: 2,", "\r\n", ftp_recv_len_str, FIND_TYPE_STR);
+		printf("ftp_recv_len = %s/r/n", ftp_recv_len_str);
+		if(ret != 1) return 0;
+		ftp_recv_len = (uint8_t)atoi(ftp_recv_len_str);
+		
+		
+		return ret != 1 ? 0 : 1;
+	}
+	else
+	{
+		printf("sATFTPGET mode is error!\r\n");
+		return 0;
+	}
+}
+
+int eATFTPQUIT(void)
+{
+	char buf[SEND_BUF_SIZE];
+  ClearRecBuf();
+	sprintf(buf, "AT+FTPQUIT");
+	SerialPrintln(buf, STRING_TYPE);
+	return recvFind("OK\r\n", 1000);
+}
+/******  ftp相关操作  ******/
 	
 
 /*******************************************************************************
@@ -1194,25 +1274,6 @@ int eATCIPSTATUS(const char * status)
   return recvFind(status, TIME_OUT);
 }
 
-//在接收的字符串中查找 target 并获取 begin 和 end 中间的子串写到data
-int recvFindAndFilter(const char *target, const char *begin, const char *end, char *data_get, uint32_t timeout)
-{
-  ClearRecBuf();
-  recvString(data_rec, target, timeout);
-  if (StringIndex(data_rec, target) != -1)
-  {
-    int32_t index1 = StringIndex(data_rec, begin);
-    int32_t index2 = StringIndex(data_rec, end);
-    if (index1 != -1 && index2 != -1)
-    {
-      index1 += StringLenth(begin);
-      StringSubstring(data_get, data_rec, index1, index2 - 1);
-      return 1;
-    }
-  }
-  ClearRecBuf();
-  return 0;
-}
 
 int sATCIPMUX(uint8_t mode)
 {
@@ -1287,6 +1348,53 @@ int sATCIPSENDSingle(const uint8_t *buffer, uint32_t len)
 }
 
 
+
+//在指定的字符串中查找 target 并获取 begin 和 end 中间的子串写到data_get
+int stringFindAndFilter(const char * source_str, const char *target, const char *begin, const char *end, char *data_get, u8 type)
+{
+  if (StringIndex(source_str, target) != -1)
+  {
+    int32_t index1 = StringIndex(source_str, begin);
+    int32_t index2 = StringIndex(source_str, end);
+		if(type == FIND_TYPE_NUM)
+		{
+			index2 = atoi(end);
+			printf("string find type is number, index2 = %d", index2);
+		}
+    if (index1 != -1 && index2 != -1)
+    {
+      index1 += StringLenth(begin);
+      StringSubstring(data_get, source_str, index1, index2 - 1);
+      return 1;
+    }
+  }
+  return 0;
+}
+
+//在接收的字符串中查找 target 并获取 begin 和 end 中间的子串写到data
+int recvFindAndFilter(const char *target, const char *begin, const char *end, char *data_get, uint32_t timeout)
+{
+  ClearRecBuf();
+  recvString(data_rec, target, timeout);
+  if (StringIndex(data_rec, target) != -1)
+  {
+    int32_t index1 = StringIndex(data_rec, begin);
+    int32_t index2 = StringIndex(data_rec, end);
+		if(*end == NULL)
+		{
+			index2 = strlen(data_rec);
+			printf("*end == NULL\r\n index2 = %d", index2);
+		}
+    if (index1 != -1 && index2 != -1)
+    {
+      index1 += StringLenth(begin);
+      StringSubstring(data_get, data_rec, index1, index2 - 1);
+      return 1;
+    }
+  }
+  ClearRecBuf();
+  return 0;
+}
 
 int recvFind(const char *target, uint32_t timeout)
 {

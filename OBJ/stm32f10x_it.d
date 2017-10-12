@@ -30,6 +30,7 @@
 ..\obj\stm32f10x_it.o: ..\STM32F10x_FWLib\inc\stm32f10x_wwdg.h
 ..\obj\stm32f10x_it.o: ..\STM32F10x_FWLib\inc\misc.h
 ..\obj\stm32f10x_it.o: ..\SYSTEM\usart\uart.h
+..\obj\stm32f10x_it.o: H:\SoftWare\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 ..\obj\stm32f10x_it.o: ..\HARDWARE\GSM\interface.h
 ..\obj\stm32f10x_it.o: ..\HARDWARE\GSM\serialportAPI.h
 ..\obj\stm32f10x_it.o: ..\HARDWARE\GSM\sim800C.h

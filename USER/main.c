@@ -27,10 +27,13 @@
  作者：正点原子 @ALIENTEK
 ************************************************/
 
-#define APP_TEMP_LEN 5120
+#define APP_TEMP_LEN 1024
 u8 app_temp[APP_TEMP_LEN];
 int app_temp_len = 0;
-char http_buf[512];	//GPRS模块通过http协议获取的数据
+char http_buf[2];	//GPRS模块通过http协议获取的数据
+
+//debug value
+char flash_buf[10];
 
 
 void NVIC_Configuration(void)  //中断优先级NVIC设置
@@ -53,6 +56,130 @@ void NVIC_Configuration(void)  //中断优先级NVIC设置
   NVIC_Init(&NVIC_InitStructure);  //初始化NVIC寄存器
 }
 
+void GPIO_Configuration(void)
+{
+  GPIO_InitTypeDef GPIO_InitStructure;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+
+#ifndef SWIO_DEBUG	
+	GPIO_PinRemapConfig(GPIO_Remap_SWJ_Disable, ENABLE);
+	// 改变指定管脚的映射 GPIO_Remap_SWJ_Disable SWJ 完全禁用（JTAG+SW-DP）
+	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable , ENABLE);
+	// 改变指定管脚的映射 GPIO_Remap_SWJ_JTAGDisable ，JTAG-DP 禁用 + SW-DP 使能
+#endif
+	
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;     //信号灯--PB3
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;     //推挽输出
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+  GPIO_SetBits(GPIOB, GPIO_Pin_3);
+	
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;     //物理按键
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;     //上拉输入
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+  //GPIO_SetBits(GPIOB, GPIO_Pin_14);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;     //LED1控制--PB5
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;     //推挽输出
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+  GPIO_SetBits(GPIOB, GPIO_Pin_5);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;     //LED2控制--PB6
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;     //推挽输出
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+  GPIO_SetBits(GPIOB, GPIO_Pin_6);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;     //LED3控制--PB7
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;     //推挽输出
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+  GPIO_SetBits(GPIOB, GPIO_Pin_7);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_8;     //LED4控制--PB8
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;     //推挽输出
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+  GPIO_SetBits(GPIOB, GPIO_Pin_8);
+
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;			//LED5控制--PB1
+	//GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;			//复用输出
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;     //推挽输出	
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+	GPIO_SetBits(GPIOB, GPIO_Pin_9);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12;     //2空气质量灯
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;     //推挽输出
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+	GPIO_ResetBits(GPIOB, GPIO_Pin_12);
+
+//  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;     //蜂鸣器
+//  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;     //推挽输出
+//  GPIO_Init(GPIOB, &GPIO_InitStructure);
+//  GPIO_SetBits(GPIOB, GPIO_Pin_13);
+
+//  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_14;     //物理按键
+//  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;     //上拉输入
+//  GPIO_Init(GPIOB, &GPIO_InitStructure);
+//  //GPIO_SetBits(GPIOB, GPIO_Pin_14);
+
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;     //A0
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;     //上拉输入
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;     //A4
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;     //推挽输出
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;     //A5
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;     //推挽输出
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;     //A6
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;     //推挽输出
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;     //A7
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;     //推挽输出
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;     //GPRS模块POWERKEY
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;     //推挽输出
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+  GPIO_ResetBits(GPIOB, GPIO_Pin_0); //PB0上电低电平
+	
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;     //GPRS模块VBAT
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;     //推挽输出
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  GPIO_SetBits(GPIOA, GPIO_Pin_1); //PA1上电低电平
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;   //USART1 TX
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;  //复用推挽输出
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;   //USART1 RX
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;  //浮空输入
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2; //USART2 TX
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;      //复用推挽输出
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+//	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;     //A2
+//  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;     //上拉输入
+//  GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;      //USART2 RX
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;   //浮空输入
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;//USART3 TX
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;//设置最高速度50MHz
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;//推挽复用输出
+  GPIO_Init(GPIOB, &GPIO_InitStructure); //将初始化好的结构体装入寄存器
+
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11;//USART3 RX
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;//GPIO模式悬浮输入
+  GPIO_Init(GPIOB, &GPIO_InitStructure);//将初始化好的结构体装入寄存器
+
+}
+
 void GPRS_USART(u32 baudRate)
 {
 	USART1Conf(baudRate, 0, 0);
@@ -71,6 +198,7 @@ int main(void)
 	int i = 0;
 
   NVIC_Configuration();
+	//GPIO_Configuration();
 	//uart_init(115200);	//串口初始化为115200
 	UartBegin(115200, &GPRS_USART, &U1_PutChar);				//串口1配置
 	USART2Conf(115200, 0, 1);
@@ -79,12 +207,14 @@ int main(void)
  	LED_Init();		  			//初始化与LED连接的硬件接口
 	KEY_Init();					//初始化按键
 	W25QXX_Init();			//W25QXX初始化
+	GPIO_Configuration();
+	
 	
 	printf("test\r\n");
 	while(0 == GSMInit(HOST_NAME, HOST_PORT, http_buf)) GSM_restart();
-	while(W25QXX_ReadID()!=W25Q128)								//检测不到W25Q128
+	while((W25QXX_ReadID())!=W25Q32)								//检测不到W25Q32
 	{
-		printf("W25Q128 Check Failed!\r\n");
+		printf("W25Q32 Check Failed!\r\n");
 		delay_ms(500);
 		printf("Please Check!\r\n");
 		delay_ms(500);
@@ -93,6 +223,7 @@ int main(void)
  
 	while(1)
 	{
+		//printf("USART_RX_CNT = %d\r\n", USART_RX_CNT);
 	 	if(USART_RX_CNT)
 		{
 			if(oldcount==USART_RX_CNT)//新周期内,没有收到任何数据,认为本次数据接收完成.
@@ -106,6 +237,8 @@ int main(void)
 				W25QXX_Write((u8*)USART_RX_BUF, 0, applenth);			//从第0个地址处开始写入数据
 				printf("W25Q128 Write Finished!\r\n");	//提示传送完成
 				memset(USART_RX_BUF, 0, sizeof(USART_RX_BUF));
+				W25QXX_Read((u8 *)flash_buf, 0, 10);					//从第0个地址处开始,读出10个字节
+				printf("flash_buf = %s\r\n",flash_buf);
 			}else oldcount=USART_RX_CNT;			
 		}
 		t++;
@@ -119,7 +252,8 @@ int main(void)
 				clearflag--;
 			}
 		}	  	 
-		key=KEY_Scan(0);
+		//key=KEY_Scan(0);
+		key=111;
 		if(key==WKUP_PRES)
 		{
 			if(applenth)

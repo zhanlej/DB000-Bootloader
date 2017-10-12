@@ -115,5 +115,19 @@ void USART1_IRQHandler(void)
 
 void USART2_IRQHandler(void)
 {
+	u8 res;	
+
+	//if(USART2->SR&(1<<5))//接收到数据
+	if(USART_GetITStatus(USART2, USART_IT_RXNE) != RESET)
+	{	 
+		USART_ClearITPendingBit(USART2, USART_IT_RXNE);
+		//res=USART2->DR; 
+		res=USART_ReceiveData(USART2);
+		if(USART_RX_CNT<USART_REC_LEN)
+		{
+			USART_RX_BUF[USART_RX_CNT]=res;
+			USART_RX_CNT++;			 									     
+		}
+	}
 
 } 

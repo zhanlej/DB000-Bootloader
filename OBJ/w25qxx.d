@@ -32,5 +32,5 @@
 ..\obj\w25qxx.o: ..\STM32F10x_FWLib\inc\misc.h
 ..\obj\w25qxx.o: ..\HARDWARE\SPI\spi.h
 ..\obj\w25qxx.o: ..\SYSTEM\delay\delay.h
-..\obj\w25qxx.o: ..\SYSTEM\usart\usart.h
+..\obj\w25qxx.o: ..\SYSTEM\usart\uart.h
 ..\obj\w25qxx.o: H:\SoftWare\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h

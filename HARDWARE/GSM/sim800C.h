@@ -42,14 +42,17 @@ extern uint8_t sim_csq;	//为了上传csq数据给服务器
 
 #define GAODE_API_KEY "9eced1b11c8c7ffd5447eb0ba28748d8"
 
+#define FIND_TYPE_STR 0
+#define FIND_TYPE_NUM 1
+
 //function
-void AutoLink(void);
 int GSMInit(const char *addr, uint32_t port, char *http_data);
 int ConectTest(void);
 int CheckState(void);
 int TCPInit(const char *addr, uint32_t port);
 int LSB_API_data(void);
 int HttpInit(char * http_recv_data);
+int FtpInit(const char *addr);
 void timer1msINT(void);
 unsigned long millis(void);
 void delay(unsigned int ms);

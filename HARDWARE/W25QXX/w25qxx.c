@@ -1,7 +1,7 @@
 #include "w25qxx.h" 
 #include "spi.h"
 #include "delay.h"
-#include "usart.h"
+#include "uart.h"
 //////////////////////////////////////////////////////////////////////////////////	 
 //本程序只供学习使用，未经作者许可，不得用于其它任何用途
 //ALIENTEK战舰STM32开发板
@@ -27,13 +27,13 @@ u16 W25QXX_TYPE=W25Q128;	//默认是W25Q128
 void W25QXX_Init(void)
 {	
   GPIO_InitTypeDef GPIO_InitStructure;
-	RCC_APB2PeriphClockCmd(	RCC_APB2Periph_GPIOB, ENABLE );//PORTB时钟使能 
+	RCC_APB2PeriphClockCmd(	RCC_APB2Periph_GPIOA, ENABLE );//PORTA时钟使能 
 
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12;  // PB12 推挽 
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11;  // PA11 推挽 
  	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;  //推挽输出
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
- 	GPIO_Init(GPIOB, &GPIO_InitStructure);
- 	GPIO_SetBits(GPIOB,GPIO_Pin_12);
+ 	GPIO_Init(GPIOA, &GPIO_InitStructure);
+ 	GPIO_SetBits(GPIOA,GPIO_Pin_11);
  
         W25QXX_CS=1;				//SPI FLASH不选中
 	SPI2_Init();		   	//初始化SPI

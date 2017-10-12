@@ -34,5 +34,5 @@
 ..\obj\sim800c.o: ..\STM32F10x_FWLib\inc\misc.h
 ..\obj\sim800c.o: ..\HARDWARE\GSM\stringAPIext.h
 ..\obj\sim800c.o: ..\SYSTEM\usart\uart.h
-..\obj\sim800c.o: H:\SoftWare\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
 ..\obj\sim800c.o: H:\SoftWare\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+..\obj\sim800c.o: H:\SoftWare\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
