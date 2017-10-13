@@ -44,6 +44,11 @@ void iap_write_appbin(u32 appxaddr,u8 *appbuf,u32 appsize)
 	if(i)STMFLASH_Write(fwaddr,iapbuf,i);//将最后的一些内容字节写进去.  
 }
 
+void iap_read_appbin(u32 appxaddr,u8 *appbuf,u32 appsize)
+{
+	STMFLASH_Read(appxaddr,(u16*)appbuf,appsize/2);
+}
+
 //跳转到应用程序段
 //appxaddr:用户代码起始地址.
 void iap_load_app(u32 appxaddr)

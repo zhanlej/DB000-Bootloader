@@ -36,3 +36,5 @@
 ..\obj\sim800c.o: ..\SYSTEM\usart\uart.h
 ..\obj\sim800c.o: H:\SoftWare\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 ..\obj\sim800c.o: H:\SoftWare\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+..\obj\sim800c.o: ..\HARDWARE\W25QXX\w25qxx.h
+..\obj\sim800c.o: ..\IAP\iap.h

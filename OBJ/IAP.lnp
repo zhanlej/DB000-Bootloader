@@ -25,7 +25,7 @@
 "..\obj\serialportapi.o"
 "..\obj\sim800c.o"
 "..\obj\stringapiext.o"
---library_type=microlib --strict --scatter "..\OBJ\IAP.sct"
+--strict --scatter "..\OBJ\IAP.sct"
 --summary_stderr --info summarysizes --map --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers
 --list ".\IAP.map" -o ..\OBJ\IAP.axf

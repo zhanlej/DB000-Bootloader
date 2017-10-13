@@ -27,9 +27,7 @@
  作者：正点原子 @ALIENTEK
 ************************************************/
 
-#define APP_TEMP_LEN 1024
-u8 app_temp[APP_TEMP_LEN];
-int app_temp_len = 0;
+
 char http_buf[2];	//GPRS模块通过http协议获取的数据
 
 //debug value
@@ -185,6 +183,7 @@ void GPRS_USART(u32 baudRate)
 	USART1Conf(baudRate, 0, 0);
 }
 
+#define APP_TEMP_LEN 1024
 int main(void)
 {		
 	u8 t;
@@ -195,6 +194,8 @@ int main(void)
 	u8 appcheck[4];				//用来检查收到的数据是否是app数据
 	int appremain = 0;				//记录剩余多少数据还没
 	int app_off = 0;
+	int app_temp_len = 0;
+	u8 app_temp[APP_TEMP_LEN];
 	int i = 0;
 
   NVIC_Configuration();
@@ -209,9 +210,9 @@ int main(void)
 	W25QXX_Init();			//W25QXX初始化
 	GPIO_Configuration();
 	
+	delay(1000);
 	
 	printf("test\r\n");
-	while(0 == GSMInit(HOST_NAME, HOST_PORT, http_buf)) GSM_restart();
 	while((W25QXX_ReadID())!=W25Q32)								//检测不到W25Q32
 	{
 		printf("W25Q32 Check Failed!\r\n");
@@ -220,6 +221,10 @@ int main(void)
 		delay_ms(500);
 		LED0=!LED0;//DS0闪烁
 	}
+	
+	while(0 == GSMInit(HOST_NAME, HOST_PORT, http_buf)) GSM_restart();
+	
+					
  
 	while(1)
 	{

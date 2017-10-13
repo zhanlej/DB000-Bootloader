@@ -26,8 +26,9 @@ extern uint8_t sim_csq;	//为了上传csq数据给服务器
 #define POWERKEY PBout(0)
 #define VBAT PAout(1)
 
-#define SEND_BUF_SIZE  512
+#define SEND_BUF_SIZE  128
 #define RECV_BUF_SIZE  512//定义接收的缓存，尽可能的大，防止溢出
+#define FTP_RECV_SIZE  256
 #define TIME_OUT 100
 
 #define AI_LINK 0
