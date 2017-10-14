@@ -279,21 +279,28 @@ int HttpInit(char * http_data)
 	return 1;
 }
 
+#define APP_TEMP_LEN 1024
+
+//for write to app
+u8 app_temp[APP_TEMP_LEN];
+u8 appcheck[4];				//用来检查收到的数据是否是app数据
+u32 appremain = 0;
+u32 app_off = 0;
+u32 app_temp_len = 0;
+
 int FtpInit(const char *addr)
 {
 	int packet_num = 0;
 	int ftp_recv_len = -1;
 	int ftp_sum_len = 0;
-	//for write to app
-	u8 appcheck[4];				//用来检查收到的数据是否是app数据
-	int appremain = 0;
-	int app_off = 0;
-	int app_temp_len = 0;
-	u8 app_temp[FTP_RECV_SIZE];
+
+	
 	
 	
 	//for debug
-	char temp_buf[FTP_RECV_SIZE];
+	int i;
+	int j;
+	u8 w25xx_check_buf[16];
 	
 	/*配置承载场景*/
 	if(!sATSAPBR1(3,1,"CONTYPE","GPRS")) return 0;
@@ -321,14 +328,13 @@ int FtpInit(const char *addr)
 	while(ftp_recv_len != 0)
 	{
 		if(!sATFTPGET(2, FTP_RECV_SIZE, &ftp_recv_len)) return 0;
-		printf("sATFTPGET 2 is ok %d, ftp_recv_len = %d\r\n", (ftp_sum_len/FTP_RECV_SIZE)+1, ftp_recv_len);
+		printf("\r\nsATFTPGET 2 is ok %d, ftp_recv_len = %d\r\n", (ftp_sum_len/FTP_RECV_SIZE)+1, ftp_recv_len);
 		
 		if(ftp_recv_len != 0)
 		{
 			printf("Start Write W25Q128....\r\n"); 
 			W25QXX_Write((u8*)ftp_recv_data, ftp_sum_len, ftp_recv_len);			//从第0个地址处开始写入数据
 			printf("W25Q128 Write Finished!\r\n");	//提示传送完成
-			memset(temp_buf, 0, sizeof(temp_buf));
 			
 			ftp_sum_len += ftp_recv_len;
 		}
@@ -344,6 +350,20 @@ int FtpInit(const char *addr)
 		return 0;
 	}
 	printf("+FTPGET: 1,0 is ok\r\n");
+	
+	//检查外置FLASH中的数据是否正确
+	printf("\r\nW25XX check\r\n");
+	for(i = 0; i < ftp_sum_len; i+=16)
+	{
+		printf("%07x: ", i);
+		W25QXX_Read(w25xx_check_buf,i,16);
+		for(j = 0; j < 16; j++)
+		{
+			printf("%02x", w25xx_check_buf[j]);
+			if((j+1)%2 == 0) printf(" ");
+		}
+		printf("\r\n");
+	}
 	
 	/*开始往片内FLASH写APP代码*/
 	if(ftp_sum_len)
@@ -361,24 +381,54 @@ int FtpInit(const char *addr)
 			
 			while(appremain)
 			{
-				if(appremain <= FTP_RECV_SIZE)
+				if(appremain <= APP_TEMP_LEN)
 				{
 					app_temp_len = appremain;
 					appremain = 0;
 				}
 				else
 				{
-					app_temp_len = FTP_RECV_SIZE;
-					appremain -= FTP_RECV_SIZE;
+					app_temp_len = APP_TEMP_LEN;
+					appremain -= APP_TEMP_LEN;
 				}
 				
-				printf("Start Read W25Q128.... %d\r\n", (app_off/FTP_RECV_SIZE)+1);
+				printf("Start Read W25Q128.... %d\r\n", (app_off/APP_TEMP_LEN)+1);
 				W25QXX_Read(app_temp, app_off, app_temp_len);
-				//printf("W25Q128 Read Finished!\r\n");
-				iap_write_appbin(FLASH_APP1_ADDR + app_off, app_temp, app_temp_len);//更新FLASH代码   
-				memset(app_temp, 0, FTP_RECV_SIZE);
 				
-				app_off += app_temp_len;
+				//检查外置FLASH中的数据是否正确
+				printf("\r\nW25XX check\r\n");
+				for(i = 0; i < app_temp_len; i+=16)
+				{
+					printf("%07x: ", (app_off/APP_TEMP_LEN)+i);
+					for(j = 0; j < 16; j++)
+					{
+						printf("%02x", app_temp[i+j]);
+						if((j+1)%2 == 0) printf(" ");
+					}
+					printf("\r\n");
+				}
+				
+				//printf("W25Q128 Read Finished!\r\n");
+				printf("~~app_off = %d, app_temp_len = %d", app_off, app_temp_len);
+				iap_write_appbin(FLASH_APP1_ADDR + app_off, app_temp, APP_TEMP_LEN);//更新FLASH代码   
+				memset(app_temp, 0, APP_TEMP_LEN);
+				
+				//检查外内FLASH中的数据是否正确
+				iap_read_appbin(FLASH_APP1_ADDR + app_off, app_temp, APP_TEMP_LEN);
+				printf("\r\n片内FLASH check\r\n");
+				for(i = 0; i < APP_TEMP_LEN; i+=16)
+				{
+					printf("%07x: ", (app_off/APP_TEMP_LEN)+i);
+					for(j = 0; j < 16; j++)
+					{
+						printf("%02x", app_temp[i+j]);
+						if((j+1)%2 == 0) printf(" ");
+					}
+					printf("\r\n");
+				}
+				memset(app_temp, 0, APP_TEMP_LEN);
+				
+				app_off += APP_TEMP_LEN;
 			}
 			
 //			iap_read_appbin(FLASH_APP1_ADDR, app_temp, app_off);
@@ -397,6 +447,17 @@ int FtpInit(const char *addr)
 	printf("开始执行FLASH用户代码!!\r\n");
 	if(((*(vu32*)(FLASH_APP1_ADDR+4))&0xFF000000)==0x08000000)//判断是否为0X08XXXXXX.
 	{	 
+		__disable_irq();
+		USART_ITConfig(USART1 , USART_IT_RXNE , DISABLE);//使能接收中断
+		USART_Cmd(USART1 , DISABLE);//打开串口
+		USART_ITConfig(USART2 , USART_IT_RXNE , DISABLE);//使能接收中断
+		USART_Cmd(USART2 , DISABLE);//打开串口
+		/* TIM IT enable */ //打开溢出中断
+    TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE);
+    /* TIM5 enable counter */
+    TIM_Cmd(TIM2, DISABLE);  //计数器使能，开始工作
+		SPI_Cmd(SPI2, DISABLE); //使能SPI外设
+		
 		iap_load_app(FLASH_APP1_ADDR);//执行FLASH APP代码
 	}else 
 	{
@@ -1239,9 +1300,7 @@ int sATFTPGET(int mode, int reqlength, int * recvlenth)
 {
 	int ret;
 	char buf[SEND_BUF_SIZE];
-	char temp_buf[RECV_BUF_SIZE];
-	char ftp_recv_len_str[10];
-	//int ftp_recv_len = 0;
+
   ClearRecBuf();
 	if(mode == 1)
 	{
@@ -1253,24 +1312,9 @@ int sATFTPGET(int mode, int reqlength, int * recvlenth)
 	{
 		sprintf(buf, "AT+FTPGET=%d,%d", mode, reqlength);
 		SerialPrintln(buf, STRING_TYPE);
-		//sprintf(buf, "%s\r\r\n", buf);	//经过调试发现此处有两个\r
-		//ret = recvFindAndFilter("\r\n", "+FTPGET: 2,", "\r\n", ftp_recv_len_str, 1000);
-		//printf("ftp_recv_len = %s\r\n", ftp_recv_len_str);
-		ret = recvDataFilter("+FTPGET: 2,", "\r\n", ftp_recv_data, recvlenth, 1000);
-		printf("recvlenth = %d, ftp_recv_data = %s", *recvlenth, ftp_recv_data);
-		while(1);
-
-		printf("ret = %d, temp_buf = %s\r\n", ret, temp_buf);
-		if(ret != 1) return 0;
-		ret = stringFindAndFilter(temp_buf, "+FTPGET: 2,", "+FTPGET: 2,", "\r\n", ftp_recv_len_str, FIND_TYPE_STR);
-		printf("ftp_recv_len = %s\r\n", ftp_recv_len_str);
-		if(ret != 1) return 0;
-		*recvlenth = atoi(ftp_recv_len_str);
 		memset(ftp_recv_data, 0, sizeof(ftp_recv_data));	//存储之前先将该字符串清空
-		ret = stringFindAndFilter(temp_buf, "+FTPGET: 2,", "\r\n", ftp_recv_len_str, ftp_recv_data, FIND_TYPE_NUM);
-		printf("ftp_recv_data = %s\r\n", ftp_recv_data);
-		if(ret != 1) return 0;
-		
+		ret = recvDataFilter("+FTPGET: 2,", "\r\n", ftp_recv_data, recvlenth, 1000);
+		printf("ret = %d, recvlenth = %d, ftp_recv_data = %s", ret, *recvlenth, ftp_recv_data);
 		
 		return ret != 1 ? 0 : 1;
 	}
@@ -1591,7 +1635,6 @@ int recvString3(char *rec_data, const char *target1, const char *target2, const 
 //when the parame of end is NULL, the index2 equal the length of data_rec
 int recvDataFilter(const char *begin, const char *end, char *data_get, int *data_len, uint32_t timeout)
 {
-	char a;
 	int i = 0;
   unsigned long start;
 	char data_len_str[10];
@@ -1603,8 +1646,7 @@ int recvDataFilter(const char *begin, const char *end, char *data_get, int *data
   {
 		while(SerialAvailable() > 0)
 		{
-			a = SerialRead();
-			data_rec[i++] = a;		
+			data_rec[i++] = SerialRead();		
 			data_rec[i] = '\0';
 			if (StringIndex(data_rec, begin) != -1)  //最后查找一下target是否在rec_data中
 			{
@@ -1622,17 +1664,20 @@ int recvDataFilter(const char *begin, const char *end, char *data_get, int *data
 							*data_len = atoi(data_len_str);
 							//printf("data_len = %d", *data_len);
 							
-							delay(100);	//稍微等待一会接收全部数据放到缓存BUF中
-//							if(SerialAvailable() < *data_len)
+//							for(i = 0; i < *data_len; i++)
 //							{
-//								printf("recvDataFilter SerialAvailable = %d is error", SerialAvailable());
-//								return 0;
+//								data_get[i] = SerialRead();
 //							}
-							for(i = 0; i < *data_len; i++)
+							
+							i = 0;
+							while (millis() - start < timeout)
 							{
-								data_get[i] = SerialRead();
-							}
-							return 1;
+								while(SerialAvailable() > 0)
+								{
+									data_get[i++] = SerialRead();
+									if(i >= *data_len) return 1;
+								}
+							}	
 						}
 					}
 				}

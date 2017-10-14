@@ -46,12 +46,6 @@ void NVIC_Configuration(void)  //中断优先级NVIC设置
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
-
-  NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQn;  //TIM3中断
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;  //先占优先级0级
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;  //从优先级3级
-  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE; //IRQ通道被使能
-  NVIC_Init(&NVIC_InitStructure);  //初始化NVIC寄存器
 }
 
 void GPIO_Configuration(void)
@@ -192,10 +186,10 @@ int main(void)
 	u16 applenth=0;				//接收到的app代码长度
 	u8 clearflag=0;  
 	u8 appcheck[4];				//用来检查收到的数据是否是app数据
-	int appremain = 0;				//记录剩余多少数据还没
-	int app_off = 0;
-	int app_temp_len = 0;
-	u8 app_temp[APP_TEMP_LEN];
+	int appremain_1 = 0;				//记录剩余多少数据还没
+	int app_off_1 = 0;
+	int app_temp_1_len_1 = 0;
+	u8 app_temp_1[APP_TEMP_LEN];
 	int i = 0;
 
   NVIC_Configuration();
@@ -205,14 +199,14 @@ int main(void)
 	USART2Conf(115200, 0, 1);
 	TIM2_Init();					//每1ms中断一次的定时器，用来记录时间
 	delay_init();	   	 	//延时初始化 
- 	LED_Init();		  			//初始化与LED连接的硬件接口
-	KEY_Init();					//初始化按键
+ 	//LED_Init();		  			//初始化与LED连接的硬件接口
+	//KEY_Init();					//初始化按键
 	W25QXX_Init();			//W25QXX初始化
 	GPIO_Configuration();
 	
 	delay(1000);
 	
-	printf("test\r\n");
+	printf("IAP TEST\r\n");
 	while((W25QXX_ReadID())!=W25Q32)								//检测不到W25Q32
 	{
 		printf("W25Q32 Check Failed!\r\n");
@@ -223,6 +217,26 @@ int main(void)
 	}
 	
 	while(0 == GSMInit(HOST_NAME, HOST_PORT, http_buf)) GSM_restart();
+	
+	printf("开始执行FLASH用户代码!!\r\n");
+	if(((*(vu32*)(FLASH_APP1_ADDR+4))&0xFF000000)==0x08000000)//判断是否为0X08XXXXXX.
+	{	 
+		__disable_irq();
+		USART_ITConfig(USART1 , USART_IT_RXNE , DISABLE);//使能接收中断
+		USART_Cmd(USART1 , DISABLE);//打开串口
+		USART_ITConfig(USART2 , USART_IT_RXNE , DISABLE);//使能接收中断
+		USART_Cmd(USART2 , DISABLE);//打开串口
+		/* TIM IT enable */ //打开溢出中断
+    TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE);
+    /* TIM5 enable counter */
+    TIM_Cmd(TIM2, DISABLE);  //计数器使能，开始工作
+		SPI_Cmd(SPI2, DISABLE); //使能SPI外设
+		
+		iap_load_app(FLASH_APP1_ADDR);//执行FLASH APP代码
+	}else 
+	{
+		printf("非FLASH应用程序,无法执行!\r\n");	   
+	}				
 	
 					
  
@@ -263,7 +277,7 @@ int main(void)
 		{
 			if(applenth)
 			{
-				appremain = applenth;
+				appremain_1 = applenth;
 				printf("开始更新固件...\r\n");	
 				W25QXX_Read(appcheck,4,4);					//从第4个地址处开始,读出4个字节
 				printf("appcheck = %02x%02x%02x%02x\r\n",appcheck[3],appcheck[2],appcheck[1],appcheck[0]);
@@ -273,26 +287,26 @@ int main(void)
 				if(appcheck[3] == 0x08)//判断是否为0X08XXXXXX.
 				{
 					i = 0;
-					app_off = i*APP_TEMP_LEN;
+					app_off_1 = i*APP_TEMP_LEN;
 					
-					while(appremain)
+					while(appremain_1)
 					{
-						if(appremain <= APP_TEMP_LEN)
+						if(appremain_1 <= APP_TEMP_LEN)
 						{
-							app_temp_len = appremain;
-							appremain = 0;
+							app_temp_1_len_1 = appremain_1;
+							appremain_1 = 0;
 						}
 						else
 						{
-							app_temp_len = APP_TEMP_LEN;
-							appremain -= APP_TEMP_LEN;
+							app_temp_1_len_1 = APP_TEMP_LEN;
+							appremain_1 -= APP_TEMP_LEN;
 						}
 						
 						printf("Start Read W25Q128.... %d\r\n", i+1);
-						W25QXX_Read(app_temp, app_off, app_temp_len);
+						W25QXX_Read(app_temp_1, app_off_1, app_temp_1_len_1);
 						//printf("W25Q128 Read Finished!\r\n");
-						iap_write_appbin(FLASH_APP1_ADDR+app_off, app_temp, app_temp_len);//更新FLASH代码   
-						memset(app_temp, 0, APP_TEMP_LEN);
+						iap_write_appbin(FLASH_APP1_ADDR+app_off_1, app_temp_1, app_temp_1_len_1);//更新FLASH代码   
+						memset(app_temp_1, 0, APP_TEMP_LEN);
 						
 						i++;
 					}
