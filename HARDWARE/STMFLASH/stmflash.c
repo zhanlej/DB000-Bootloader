@@ -82,7 +82,8 @@ void STMFLASH_Write(u32 WriteAddr,u16 *pBuffer,u16 NumToWrite)
 			secpos++;				//扇区地址增1
 			secoff=0;				//偏移位置为0 	 
 		   	pBuffer+=secremain;  	//指针偏移
-			WriteAddr+=secremain;	//写地址偏移	   
+			//WriteAddr+=secremain;	//写地址偏移	   
+			WriteAddr+=secremain*2; //写地址偏移(16位数据地址,需要*2) 原来代码此处有BUG，需要修改为*2才能正确执行。
 		   	NumToWrite-=secremain;	//字节(16位)数递减
 			if(NumToWrite>(STM_SECTOR_SIZE/2))secremain=STM_SECTOR_SIZE/2;//下一个扇区还是写不完
 			else secremain=NumToWrite;//下一个扇区可以写完了
@@ -114,7 +115,53 @@ void Test_Write(u32 WriteAddr,u16 WriteData)
 	STMFLASH_Write(WriteAddr,&WriteData,1);//写入一个字 
 }
 
+void Flash_Write_Number(u32 timeout_count, u32 wirte_addr)
+{
+	u16 timeout_str[2];
+	timeout_str[0] = timeout_count & 0xffff;
+	timeout_str[1] = (timeout_count>>16) & 0xffff; 
+	STMFLASH_Write(wirte_addr,(u16*)timeout_str,2);
+}
 
+u32 Flash_Read_Number(u32 wirte_addr)
+{
+	u16 timeout_str[2];
+	u32 timeout_count;
+	STMFLASH_Read(wirte_addr,(u16*)timeout_str,2);
+	timeout_count = timeout_str[0] + (timeout_str[1]<<16);
+	return timeout_count;
+}
+
+#define FLASHBUF_SIZE 128
+u16 flashbuf[FLASHBUF_SIZE]; 
+void Flash_Write_Str(u32 flash_addr,u8 *write_buf,u32 size)
+{
+	
+	u16 t;
+	u16 i=0;
+	u16 temp;
+	u32 fwaddr=flash_addr;//当前写入的地址
+	u8 *dfu=write_buf;
+	for(t=0;t<size;t+=2)
+	{						    
+		temp=(u16)dfu[1]<<8;
+		temp+=(u16)dfu[0];	  
+		dfu+=2;//偏移2个字节
+		flashbuf[i++]=temp;	    
+		if(i==FLASHBUF_SIZE)
+		{
+			i=0;
+			STMFLASH_Write(fwaddr,flashbuf,FLASHBUF_SIZE);	
+			fwaddr+=(FLASHBUF_SIZE*2);//偏移256  16=2*8.所以要乘以2.
+		}
+	}
+	if(i)STMFLASH_Write(fwaddr,flashbuf,i);//将最后的一些内容字节写进去.  
+}
+
+void Flash_Read_Str(u32 flash_addr,u8 *read_buf,u32 size)
+{
+	STMFLASH_Read(flash_addr, (u16*)read_buf, size/2);
+}
 
 
 

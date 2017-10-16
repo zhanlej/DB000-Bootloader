@@ -61,7 +61,27 @@ void iap_load_app(u32 appxaddr)
 	}
 }		 
 
-
+void Jump_to_App()
+{
+	printf("开始执行FLASH用户代码!!\r\n");
+	if(((*(vu32*)(FLASH_APP1_ADDR+4))&0xFF000000)==0x08000000)//判断是否为0X08XXXXXX.
+	{	 
+		__disable_irq();
+		USART_ITConfig(USART1 , USART_IT_RXNE , DISABLE);//失能接收中断
+		USART_Cmd(USART1 , DISABLE);//关闭串口
+		USART_ITConfig(USART2 , USART_IT_RXNE , DISABLE);//失能接收中断
+		USART_Cmd(USART2 , DISABLE);//关闭串口
+    TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE);
+    TIM_Cmd(TIM2, DISABLE);  //计数器失能
+		SPI_Cmd(SPI2, DISABLE); //失能SPI外设
+		
+		Flash_Write_Number(1, FLASH_FIRMWARE_FLAG);
+		iap_load_app(FLASH_APP1_ADDR);//执行FLASH APP代码
+	}else 
+	{
+		printf("非FLASH应用程序,无法执行!\r\n");	   
+	}		
+}
 
 
 
