@@ -1,4 +1,5 @@
 ..\obj\iap.o: ..\IAP\iap.c
+..\obj\iap.o: H:\SoftWare\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
 ..\obj\iap.o: ..\SYSTEM\sys\sys.h
 ..\obj\iap.o: ..\USER\stm32f10x.h
 ..\obj\iap.o: ..\CORE\core_cm3.h
@@ -34,3 +35,4 @@
 ..\obj\iap.o: H:\SoftWare\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 ..\obj\iap.o: ..\HARDWARE\STMFLASH\stmflash.h
 ..\obj\iap.o: ..\IAP\iap.h
+..\obj\iap.o: ..\HARDWARE\W25QXX\w25qxx.h

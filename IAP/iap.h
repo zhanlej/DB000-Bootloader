@@ -22,7 +22,8 @@ void iap_load_app(u32 appxaddr);			//执行flash里面的app程序
 void iap_load_appsram(u32 appxaddr);		//执行sram里面的app程序
 void iap_write_appbin(u32 appxaddr,u8 *appbuf,u32 applen);	//在指定地址开始,写入bin
 void iap_read_appbin(u32 appxaddr,u8 *appbuf,u32 appsize);	//在指定地址开始,读取内容
-void Jump_to_App();
+void Jump_to_App(void);
+int APP_W25qxx_to_Flash(u32 ftp_sum_len);
 #endif
 
 

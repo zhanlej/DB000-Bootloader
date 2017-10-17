@@ -1,8 +1,10 @@
+#include "string.h"
 #include "sys.h"
 #include "delay.h"
 #include "uart.h"
 #include "stmflash.h"
 #include "iap.h"
+#include "w25qxx.h"
 //////////////////////////////////////////////////////////////////////////////////	 
 //本程序只供学习使用，未经作者许可，不得用于其它任何用途
 //ALIENTEK战舰STM32开发板
@@ -61,7 +63,7 @@ void iap_load_app(u32 appxaddr)
 	}
 }		 
 
-void Jump_to_App()
+void Jump_to_App(void)
 {
 	printf("开始执行FLASH用户代码!!\r\n");
 	if(((*(vu32*)(FLASH_APP1_ADDR+4))&0xFF000000)==0x08000000)//判断是否为0X08XXXXXX.
@@ -83,7 +85,97 @@ void Jump_to_App()
 	}		
 }
 
+#define APP_TEMP_LEN 1024
 
+//for write to app
+u8 app_temp[APP_TEMP_LEN];
+u8 appcheck[4];				//用来检查收到的数据是否是app数据
+u32 appremain = 0;
+u32 app_off = 0;
+u32 app_temp_len = 0;
+int APP_W25qxx_to_Flash(u32 ftp_sum_len)
+{
+	/*开始往片内FLASH写APP代码*/
+	if(ftp_sum_len)
+	{
+		appremain = ftp_sum_len;
+		printf("开始更新固件...\r\n");	
+		W25QXX_Read(appcheck,4,4);					//从第4个地址处开始,读出4个字节
+		printf("appcheck = %02x%02x%02x%02x\r\n",appcheck[3],appcheck[2],appcheck[1],appcheck[0]);
+
+		if(appcheck[3] == 0x08)//判断是否为0X08XXXXXX.
+		//if(1)
+		{
+			
+			while(appremain)
+			{
+				if(appremain <= APP_TEMP_LEN)
+				{
+					app_temp_len = appremain;
+					appremain = 0;
+				}
+				else
+				{
+					app_temp_len = APP_TEMP_LEN;
+					appremain -= APP_TEMP_LEN;
+				}
+				
+				printf("Start Read W25Q128.... %d\r\n", (app_off/APP_TEMP_LEN)+1);
+				W25QXX_Read(app_temp, app_off, app_temp_len);
+				
+#ifdef IAP_DEBUG
+				//检查外置FLASH中的数据是否正确
+				printf("\r\nW25XX check\r\n");
+				for(i = 0; i < app_temp_len; i+=16)
+				{
+					printf("%07x: ", (app_off/APP_TEMP_LEN)+i);
+					for(j = 0; j < 16; j++)
+					{
+						printf("%02x", app_temp[i+j]);
+						if((j+1)%2 == 0) printf(" ");
+					}
+					printf("\r\n");
+				}
+#endif
+				
+				printf("app_off = %d, app_temp_len = %d", app_off, app_temp_len);
+				iap_write_appbin(FLASH_APP1_ADDR + app_off, app_temp, APP_TEMP_LEN);//更新FLASH代码   
+				memset(app_temp, 0, APP_TEMP_LEN);
+				
+#ifdef IAP_DEBUG
+				//检查外内FLASH中的数据是否正确
+				iap_read_appbin(FLASH_APP1_ADDR + app_off, app_temp, APP_TEMP_LEN);
+				printf("\r\n片内FLASH check\r\n");
+				for(i = 0; i < APP_TEMP_LEN; i+=16)
+				{
+					printf("%07x: ", (app_off/APP_TEMP_LEN)+i);
+					for(j = 0; j < 16; j++)
+					{
+						printf("%02x", app_temp[i+j]);
+						if((j+1)%2 == 0) printf(" ");
+					}
+					printf("\r\n");
+				}
+				memset(app_temp, 0, APP_TEMP_LEN);
+#endif
+				
+				app_off += APP_TEMP_LEN;
+			}
+			printf("固件更新完成!\r\n");	
+		}else 
+		{	   
+			printf("非FLASH应用程序!\r\n");
+			return 0;
+		}
+	}else 
+	{
+		printf("没有可以更新的固件!\r\n");
+		return 0;
+	}
+	
+	Jump_to_App();
+	return 1;
+}
 
 
 
