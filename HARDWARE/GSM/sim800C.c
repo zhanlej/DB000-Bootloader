@@ -10,6 +10,7 @@
 #include "uart.h"
 #include "string.h"
 #include "stdio.h"
+#include "stmflash.h"
 #include "w25qxx.h"
 #include "iap.h"
 
@@ -18,7 +19,6 @@
 volatile unsigned long sys_tick = 0;
 
 char data_rec[RECV_BUF_SIZE];
-char ftp_recv_data[FTP_RECV_SIZE];
 uint8_t sim_csq = 0;
 char sim_ip[15];
 char sim_imei[16];
@@ -104,7 +104,7 @@ int eATCIPSTATUS(const char * status);
 int sATCIPSTARTSingle(const char *type, const char *addr, uint32_t port);
 int sATCIPSENDSingle(const uint8_t *buffer, uint32_t len);
 int recvString3(char *rec_data, const char *target1, const char *target2, const char *target3, uint32_t timeout);
-int recvDataFilter(const char *begin, const char *end, char *data_get, int *data_len, int max_len, uint32_t timeout);
+int recvDataFilter(const char *begin, const char *end, u8 *data_get, int *data_len, int max_len, uint32_t timeout);
 
 int GSMInit(const char *addr, uint32_t port, char *http_data)
 {	
@@ -283,16 +283,29 @@ int HttpInit(char * http_data)
 
 int FtpInit(const char *addr)
 {
-	int i;
-	int packet_num = 0;
+	int packet_num = 1;
 	int ftp_recv_len = -1;
 	int ftp_sum_len = 0;	
+	char ftp_server[32] = "47.92.81.9";
+	char ftp_username[32] = "firmware";
+	char ftp_passwd[32] = "vB46e9SRck61Sgvp2IGe";
+	char ftp_filename[32] = "file";
+	char ftp_path[32] = "/v1.0/";
+	
 	
 #ifdef IAP_DEBUG
 	//for debug
+	int i;
 	int j;
 	u8 w25xx_check_buf[16];
 #endif
+	
+	Flash_Read_Str(FLASH_FTP_SERVER, (u8 *)ftp_server, FTP_PARAM_SIZE);
+	Flash_Read_Str(FLASH_FTP_USERNAME, (u8 *)ftp_username, FTP_PARAM_SIZE);
+	Flash_Read_Str(FLASH_FTP_PASSWD, (u8 *)ftp_passwd, FTP_PARAM_SIZE);
+	Flash_Read_Str(FLASH_FTP_FILENAME, (u8 *)ftp_filename, FTP_PARAM_SIZE);
+	Flash_Read_Str(FLASH_FTP_PATH, (u8 *)ftp_path, FTP_PARAM_SIZE);
+	printf("ftp_server = %s, ftp_username = %s, ftp_passwd = %s, ftp_filename = %s, ftp_path = %s\r\n", ftp_server, ftp_username, ftp_passwd, ftp_filename, ftp_path);
 	
 	/*配置承载场景*/
 	if(!sATSAPBR1(3,1,"CONTYPE","GPRS")) return 0;
@@ -304,36 +317,35 @@ int FtpInit(const char *addr)
 	/*ftp 设置*/
 	if(!sATFTPCID(1)) return 0;
 	printf("sATFTPCID is ok\r\n");
-	if(!sATFTPSERV("222.29.40.41")) return 0;
-	printf("sATFTPSERV is ok\r\n");
-	if(!sATFTPUN("test")) return 0;
-	printf("sATFTPUN is ok\r\n");
-	if(!sATFTPPW("111111")) return 0;
-	printf("sATFTPPW is ok\r\n");
-	if(!sATFTPGETNAME("UartT.bin")) return 0;
-	printf("sATFTPGETNAME is ok\r\n");
-	if(!sATFTPGETPATH("/v1.0/")) return 0;
-	printf("sATFTPGETPATH is ok\r\n");
+	if(!sATFTPSERV(ftp_server)) return 0;
+	printf("sATFTPSERV = %s is ok\r\n", ftp_server);
+	if(!sATFTPUN(ftp_username)) return 0;
+	printf("sATFTPUN = %s is ok\r\n", ftp_username);
+	if(!sATFTPPW(ftp_passwd)) return 0;
+	printf("sATFTPPW = %s is ok\r\n", ftp_passwd);
+	if(!sATFTPGETNAME(ftp_filename)) return 0;
+	printf("sATFTPGETNAME = %s is ok\r\n", ftp_filename);
+	if(!sATFTPGETPATH(ftp_path)) return 0;
+	printf("sATFTPGETPATH = %s is ok\r\n", ftp_path);
 	if(!sATFTPGET(1, NULL, NULL)) return 0;
 	printf("sATFTPGET 1 is ok\r\n");
 	delay(2000);	//由于AT+FTPGET=2,xxx的反应比较慢，需要加一些延迟，否则读出的数会是0。
-	i = 1;
 	while(ftp_recv_len != 0)
 	{
-		if(!sATFTPGET(2, FTP_RECV_SIZE, &ftp_recv_len)) return 0;
-		printf("\r\nsATFTPGET 2 is ok %d, ftp_recv_len = %d\r\n", i, ftp_recv_len);
+		if(!sATFTPGET(2, FIRMWARE_PACK_SIZE, &ftp_recv_len)) return 0;
+		printf("sATFTPGET 2,%d is ok, %d ftp_recv_len = %d\r\n", FIRMWARE_PACK_SIZE, packet_num, ftp_recv_len);
 		
 		if(ftp_recv_len != 0)
 		{
 			//printf("Start Write W25Q128....\r\n"); 
-			W25QXX_Write((u8*)ftp_recv_data, ftp_sum_len, ftp_recv_len);			//从第0个地址处开始写入数据
+			W25QXX_Write(firmware_packet, ftp_sum_len, ftp_recv_len);			//从第0个地址处开始写入数据
 			//printf("W25Q128 Write Finished!\r\n");	//提示传送完成
 			
 			ftp_sum_len += ftp_recv_len;
 		}
 		delay(500);	//加个延迟，否则读取太快会导致读数异常
 		
-		packet_num++; i++;
+		packet_num++;
 	}
 	if(!recvFind("+FTPGET: 1,0\r\n", 30000))
 	{
@@ -359,7 +371,7 @@ int FtpInit(const char *addr)
 	}
 #endif
 	
-	return APP_W25qxx_to_Flash(ftp_sum_len);
+	return APP_W25qxx_to_Flash(W25X_NEW_FIRMWARE_ADDR, FLASH_APP1_ADDR, ftp_sum_len);
 }
 
 
@@ -1207,10 +1219,10 @@ int sATFTPGET(int mode, int reqlength, int * recvlenth)
 	{
 		sprintf(buf, "AT+FTPGET=%d,%d", mode, reqlength);
 		SerialPrintln(buf, STRING_TYPE);
-		memset(ftp_recv_data, 0, sizeof(ftp_recv_data));	//存储之前先将该字符串清空
-		ret = recvDataFilter("+FTPGET: 2,", "\r\n", ftp_recv_data, recvlenth, FTP_RECV_SIZE, 1000);
-		printf("ret = %d, recvlenth = %d, ftp_recv_data = %s", ret, *recvlenth, ftp_recv_data);
-		if(*recvlenth > FTP_RECV_SIZE) return 0;
+		memset(firmware_packet, 0, sizeof(firmware_packet));	//存储之前先将该字符串清空
+		ret = recvDataFilter("+FTPGET: 2,", "\r\n", firmware_packet, recvlenth, FIRMWARE_PACK_SIZE, 1000);
+		//printf("ret = %d, recvlenth = %d, firmware_packet = %s", ret, *recvlenth, firmware_packet);
+		if(*recvlenth > FIRMWARE_PACK_SIZE) return 0;
 		
 		return ret != 1 ? 0 : 1;
 	}
@@ -1529,7 +1541,7 @@ int recvString3(char *rec_data, const char *target1, const char *target2, const 
 
 //在接收的字符串中查找 target 并获取 begin 和 end 中间的子串写到data
 //when the parame of end is NULL, the index2 equal the length of data_rec
-int recvDataFilter(const char *begin, const char *end, char *data_get, int *data_len, int max_len,uint32_t timeout)
+int recvDataFilter(const char *begin, const char *end, u8 *data_get, int *data_len, int max_len,uint32_t timeout)
 {
 	int i = 0;
   unsigned long start;

@@ -18,6 +18,10 @@
 //All rights reserved									  
 //////////////////////////////////////////////////////////////////////////////////	
 
+//全局变量
+u8 app_temp[APP_TEMP_LEN]; //for write to app
+u8 firmware_packet[FIRMWARE_PACK_SIZE];	//保存每包固件的内容
+
 iapfun jump2app; 
 u16 iapbuf[1024];   
 //appxaddr:应用程序的起始地址
@@ -77,7 +81,6 @@ void Jump_to_App(void)
     TIM_Cmd(TIM2, DISABLE);  //计数器失能
 		SPI_Cmd(SPI2, DISABLE); //失能SPI外设
 		
-		Flash_Write_Number(1, FLASH_FIRMWARE_FLAG);
 		iap_load_app(FLASH_APP1_ADDR);//执行FLASH APP代码
 	}else 
 	{
@@ -85,22 +88,24 @@ void Jump_to_App(void)
 	}		
 }
 
-#define APP_TEMP_LEN 1024
-
-//for write to app
-u8 app_temp[APP_TEMP_LEN];
+int APP_W25qxx_to_Flash(u32 w25qxx_addr, u32 app_addr, u32 app_sum_len)
+{
 u8 appcheck[4];				//用来检查收到的数据是否是app数据
 u32 appremain = 0;
 u32 app_off = 0;
 u32 app_temp_len = 0;
-int APP_W25qxx_to_Flash(u32 ftp_sum_len)
-{
+	
+#ifdef IAP_DEBUG
+int i=0, j=0;
+#endif
+
 	/*开始往片内FLASH写APP代码*/
-	if(ftp_sum_len)
+	if(app_sum_len)
 	{
-		appremain = ftp_sum_len;
+		appremain = app_sum_len;
 		printf("开始更新固件...\r\n");	
-		W25QXX_Read(appcheck,4,4);					//从第4个地址处开始,读出4个字节
+		printf("w25qxx_addr = 0x%08x, app_addr = 0x%08x, app_sum_len = %d\r\n", w25qxx_addr, app_addr, app_sum_len);
+		W25QXX_Read(appcheck,w25qxx_addr+4,4);					//从第4个地址处开始,读出4个字节
 		printf("appcheck = %02x%02x%02x%02x\r\n",appcheck[3],appcheck[2],appcheck[1],appcheck[0]);
 
 		if(appcheck[3] == 0x08)//判断是否为0X08XXXXXX.
@@ -120,8 +125,9 @@ int APP_W25qxx_to_Flash(u32 ftp_sum_len)
 					appremain -= APP_TEMP_LEN;
 				}
 				
-				printf("Start Read W25Q128.... %d\r\n", (app_off/APP_TEMP_LEN)+1);
-				W25QXX_Read(app_temp, app_off, app_temp_len);
+				printf("Start Read W25Q128.... %d", (app_off/APP_TEMP_LEN)+1);
+				memset(app_temp, 0, APP_TEMP_LEN);
+				W25QXX_Read(app_temp, w25qxx_addr + app_off, app_temp_len);
 				
 #ifdef IAP_DEBUG
 				//检查外置FLASH中的数据是否正确
@@ -138,13 +144,12 @@ int APP_W25qxx_to_Flash(u32 ftp_sum_len)
 				}
 #endif
 				
-				printf("app_off = %d, app_temp_len = %d", app_off, app_temp_len);
-				iap_write_appbin(FLASH_APP1_ADDR + app_off, app_temp, APP_TEMP_LEN);//更新FLASH代码   
-				memset(app_temp, 0, APP_TEMP_LEN);
+				printf("app_off = %d, app_temp_len = %d\r\n", app_off, app_temp_len);
+				iap_write_appbin(app_addr + app_off, app_temp, APP_TEMP_LEN);//更新FLASH代码   
 				
 #ifdef IAP_DEBUG
 				//检查外内FLASH中的数据是否正确
-				iap_read_appbin(FLASH_APP1_ADDR + app_off, app_temp, APP_TEMP_LEN);
+				iap_read_appbin(app_addr + app_off, app_temp, APP_TEMP_LEN);
 				printf("\r\n片内FLASH check\r\n");
 				for(i = 0; i < APP_TEMP_LEN; i+=16)
 				{
@@ -173,11 +178,104 @@ int APP_W25qxx_to_Flash(u32 ftp_sum_len)
 		return 0;
 	}
 	
-	Jump_to_App();
 	return 1;
 }
 
+int APP_Flash_to_W25qxx(u32 app_addr, u32 w25qxx_addr, u32 app_sum_len)
+{
+	u8 appcheck[4];				//用来检查收到的数据是否是app数据
+	u32 appremain = 0;
+	u32 app_off = 0;
+	u32 app_temp_len = 0;
+	
+#ifdef IAP_DEBUG
+int i=0, j=0;
+#endif
 
+	/*开始往片内FLASH写APP代码*/
+	if(app_sum_len)
+	{
+		appremain = app_sum_len;
+		printf("开始备份固件...\r\n");	
+		printf("w25qxx_addr = 0x%08x, app_addr = 0x%08x, app_sum_len = %d\r\n", w25qxx_addr, app_addr, app_sum_len);
+		//W25QXX_Read(appcheck,w25qxx_addr+4,4);					//从第4个地址处开始,读出4个字节
+		iap_read_appbin(app_addr+4, appcheck, 4);
+		printf("appcheck = %02x%02x%02x%02x\r\n",appcheck[3],appcheck[2],appcheck[1],appcheck[0]);
+
+		if(appcheck[3] == 0x08)//判断是否为0X08XXXXXX.
+		{
+			
+			while(appremain)
+			{
+				if(appremain <= APP_TEMP_LEN)
+				{
+					app_temp_len = appremain;
+					appremain = 0;
+				}
+				else
+				{
+					app_temp_len = APP_TEMP_LEN;
+					appremain -= APP_TEMP_LEN;
+				}
+				
+				printf("Start Read FLASH.... %d", (app_off/APP_TEMP_LEN)+1);
+				memset(app_temp, 0, APP_TEMP_LEN);
+				//W25QXX_Read(app_temp, w25qxx_addr + app_off, app_temp_len);
+				iap_read_appbin(app_addr + app_off, app_temp, app_temp_len);
+				
+#ifdef IAP_DEBUG
+				//检查外置FLASH中的数据是否正确
+				printf("\r\nFLASH check\r\n");
+				for(i = 0; i < app_temp_len; i+=16)
+				{
+					printf("%07x: ", (app_off/APP_TEMP_LEN)+i);
+					for(j = 0; j < 16; j++)
+					{
+						printf("%02x", app_temp[i+j]);
+						if((j+1)%2 == 0) printf(" ");
+					}
+					printf("\r\n");
+				}
+#endif
+				
+				printf("app_off = %d, app_temp_len = %d\r\n", app_off, app_temp_len);
+				//iap_write_appbin(app_addr + app_off, app_temp, APP_TEMP_LEN);//更新FLASH代码   
+				W25QXX_Write(app_temp, w25qxx_addr + app_off, APP_TEMP_LEN);//备份到w25qxx中
+				
+#ifdef IAP_DEBUG
+				//检查外内FLASH中的数据是否正确
+				//iap_read_appbin(app_addr + app_off, app_temp, APP_TEMP_LEN);
+				W25QXX_Read(app_temp, w25qxx_addr + app_off, APP_TEMP_LEN);
+				printf("\r\nW25QXX check\r\n");
+				for(i = 0; i < APP_TEMP_LEN; i+=16)
+				{
+					printf("%07x: ", (app_off/APP_TEMP_LEN)+i);
+					for(j = 0; j < 16; j++)
+					{
+						printf("%02x", app_temp[i+j]);
+						if((j+1)%2 == 0) printf(" ");
+					}
+					printf("\r\n");
+				}
+				memset(app_temp, 0, APP_TEMP_LEN);
+#endif
+				
+				app_off += APP_TEMP_LEN;
+			}
+			printf("固件备份完成!\r\n");	
+		}else 
+		{	   
+			printf("非FLASH应用程序!\r\n");
+			return 0;
+		}
+	}else 
+	{
+		printf("没有可以备份的固件!\r\n");
+		return 0;
+	}
+	
+	return 1;
+}
 
 
 

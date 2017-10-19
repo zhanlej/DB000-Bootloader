@@ -195,25 +195,33 @@ int main(void)
 	delay(1000);
 	
 	printf("IAP TEST\r\n");
+	printf("\r\n########### 烧录日期: "__DATE__" - "__TIME__"\r\n");
 	
-	//根据firmware_flag的值判断是否需要更新固件。
-	firmware_flag = Flash_Read_Number(FLASH_FIRMWARE_FLAG);
-	printf("firmware_flag = %d\r\n", firmware_flag);
-	if(firmware_flag == 1) Jump_to_App();
-	Flash_Write_Number(0, FLASH_FIRMWARE_FLAG);
-	firmware_flag = Flash_Read_Number(FLASH_FIRMWARE_FLAG);
-	printf("firmware_flag = %d\r\n", firmware_flag);
+	//for debug
+	//while(1);
 	
 	while((W25QXX_ReadID())!=W25Q32)								//检测不到W25Q32
 	{
 		printf("W25Q32 Check Failed!\r\n");
-		delay_ms(500);
 		printf("Please Check!\r\n");
-		delay_ms(500);
-		LED0=!LED0;//DS0闪烁
+		while(1);
 	}
 	
-	while(0 == GSMInit(HOST_NAME, HOST_PORT, http_buf)) GSM_restart();
+	//根据firmware_flag的值判断是否需要更新固件。
+	firmware_flag = Flash_Read_Number(FLASH_FIRMWARE_FLAG);
+	printf("firmware_flag = %d\r\n", firmware_flag);
+	if(firmware_flag == 1) printf("直接跳入APP\r\n");
+	else if(firmware_flag == 2) //等于2说明更新中途失败，将备份的固件烧写到FLASH中
+	{
+		APP_W25qxx_to_Flash(W25X_OLD_FIRMWARE_ADDR, FLASH_APP1_ADDR, FLASH_APP1_SIZE);
+		Jump_to_App();
+	}
+	else  //否则准备更新，先将原来的固件进行备份，然后将firmware_flag设置为2
+	{
+		APP_Flash_to_W25qxx(FLASH_APP1_ADDR, W25X_OLD_FIRMWARE_ADDR, FLASH_APP1_SIZE);
+		Flash_Write_Number(2, FLASH_FIRMWARE_FLAG);
+		while(0 == GSMInit(HOST_NAME, HOST_PORT, http_buf)) GSM_restart();
+	}
 	
 	Jump_to_App();		
 	   
