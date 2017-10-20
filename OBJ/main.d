@@ -41,3 +41,4 @@
 ..\obj\main.o: ..\HARDWARE\GSM\interface.h
 ..\obj\main.o: ..\HARDWARE\GSM\serialportAPI.h
 ..\obj\main.o: ..\HARDWARE\GSM\sim800C.h
+..\obj\main.o: ..\HARDWARE\buzzer\buzzer.h

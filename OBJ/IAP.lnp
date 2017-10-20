@@ -7,6 +7,7 @@
 "..\obj\stmflash.o"
 "..\obj\spi.o"
 "..\obj\w25qxx.o"
+"..\obj\buzzer.o"
 "..\obj\delay.o"
 "..\obj\sys.o"
 "..\obj\uart.o"
